@@ -29,21 +29,6 @@ function setLoading(loading) {
   searchButton.disabled = loading;
   buttonText.textContent = loading ? "Sedang mencari..." : "Cari Preset";
 }
-
-// Di APK/WebView, link Alight Motion harus dilempar ke aplikasi AM (bukan dibuka di dalam halaman web).
-function toAppLink(link) {
-  try {
-    const u = new URL(link);
-    const isAndroid = /android/i.test(navigator.userAgent);
-    if (isAndroid && (u.hostname === "alightcreative.com" || u.hostname.endsWith(".alightcreative.com"))) {
-      return "intent://" + u.host + u.pathname + u.search +
-        "#Intent;scheme=https;package=com.alightcreative.motion;" +
-        "S.browser_fallback_url=" + encodeURIComponent(link) + ";end";
-    }
-  } catch (e) {}
-  return link;
-}
-
 function safeUrl(raw) {
   try {
     const u = new URL(raw);
@@ -106,12 +91,22 @@ function makePresetCard(preset, index) {
   const actions = document.createElement("div"); actions.className = "preset-actions";
   const link = safeUrl(preset.url);
   const open = document.createElement("a"); open.className = "open-preset"; open.textContent = link ? "↗ Buka Preset  ›" : "Link tidak tersedia";
-  if (link) {
-    open.href = toAppLink(link);
-    if (!/^intent:/.test(open.href)) { open.target = "_blank"; open.rel = "noopener noreferrer"; }
-  }
+  if (link) { open.href = link; open.target = "_blank"; open.rel = "noopener noreferrer"; }
   else { open.href = "#"; open.addEventListener("click", e => e.preventDefault()); open.style.opacity = ".55"; }
   actions.appendChild(open);
+  if (link) {
+    const copy = document.createElement("button"); copy.type = "button"; copy.className = "open-preset"; copy.textContent = "⧉ Salin Link";
+    copy.style.cssText = "background:transparent;border:1px solid #7a6bff;color:#cfd6ff;margin-top:8px;cursor:pointer;width:100%";
+    copy.addEventListener("click", async () => {
+      try { await navigator.clipboard.writeText(link); }
+      catch (e) {
+        const t = document.createElement("textarea"); t.value = link; t.style.position = "fixed"; t.style.opacity = "0";
+        document.body.appendChild(t); t.select(); try { document.execCommand("copy"); } catch (_) {} t.remove();
+      }
+      showToast("Link disalin. Tempel di Chrome untuk membuka di Alight Motion.");
+    });
+    actions.appendChild(copy);
+  }
   content.append(label, title, meta, source, actions);
   card.append(thumb, content);
   return card;
