@@ -29,6 +29,21 @@ function setLoading(loading) {
   searchButton.disabled = loading;
   buttonText.textContent = loading ? "Sedang mencari..." : "Cari Preset";
 }
+
+// Di APK/WebView, link Alight Motion harus dilempar ke aplikasi AM (bukan dibuka di dalam halaman web).
+function toAppLink(link) {
+  try {
+    const u = new URL(link);
+    const isAndroid = /android/i.test(navigator.userAgent);
+    if (isAndroid && (u.hostname === "alightcreative.com" || u.hostname.endsWith(".alightcreative.com"))) {
+      return "intent://" + u.host + u.pathname + u.search +
+        "#Intent;scheme=https;package=com.alightcreative.motion;" +
+        "S.browser_fallback_url=" + encodeURIComponent(link) + ";end";
+    }
+  } catch (e) {}
+  return link;
+}
+
 function safeUrl(raw) {
   try {
     const u = new URL(raw);
@@ -91,7 +106,10 @@ function makePresetCard(preset, index) {
   const actions = document.createElement("div"); actions.className = "preset-actions";
   const link = safeUrl(preset.url);
   const open = document.createElement("a"); open.className = "open-preset"; open.textContent = link ? "↗ Buka Preset  ›" : "Link tidak tersedia";
-  if (link) { open.href = link; open.target = "_blank"; open.rel = "noopener noreferrer"; }
+  if (link) {
+    open.href = toAppLink(link);
+    if (!/^intent:/.test(open.href)) { open.target = "_blank"; open.rel = "noopener noreferrer"; }
+  }
   else { open.href = "#"; open.addEventListener("click", e => e.preventDefault()); open.style.opacity = ".55"; }
   actions.appendChild(open);
   content.append(label, title, meta, source, actions);
